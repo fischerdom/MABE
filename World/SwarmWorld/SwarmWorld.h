@@ -29,6 +29,7 @@ public:
     static shared_ptr<ParameterLink<double>> nAgentsPL;
     static shared_ptr<ParameterLink<string>> senseSidesPL;
     static shared_ptr<ParameterLink<int>> resetOutputsPL;
+    static shared_ptr<ParameterLink<int>> blockWayPL;
     static shared_ptr<ParameterLink<double>> penaltyPL;
     static shared_ptr<ParameterLink<int>> waitForGoalPL;
     static shared_ptr<ParameterLink<int>> pheroPL;
@@ -39,6 +40,7 @@ public:
     bool senseAgents;
     bool resetOutputs;
     bool hasPenalty;
+    bool blockWay;
     bool phero;
     double nAgents;
     vector<int> senseSides;

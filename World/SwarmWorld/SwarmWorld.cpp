@@ -14,6 +14,7 @@ shared_ptr<ParameterLink<int>> SwarmWorld::senseAgentsPL = Parameters::register_
 shared_ptr<ParameterLink<string>> SwarmWorld::senseSidesPL = Parameters::register_parameter("WORLD_SWARM-senseSides", (string)"[1]", "1 if ants can sense");
 shared_ptr<ParameterLink<int>> SwarmWorld::resetOutputsPL = Parameters::register_parameter("WORLD_SWARM-resetOutputs", 0, "1 if outputs should be reseted after one time step");
 shared_ptr<ParameterLink<int>> SwarmWorld::pheroPL = Parameters::register_parameter("WORLD_SWARM-phero", 0, "do it with pheromones sexy");
+shared_ptr<ParameterLink<int>> SwarmWorld::blockWayPL = Parameters::register_parameter("WORLD_SWARM-blockWay", 0, "1 if overlap is disabled");
 shared_ptr<ParameterLink<int>> SwarmWorld::hasPenaltyPL = Parameters::register_parameter("WORLD_SWARM-hasPenalty", 1, "1 if penalty when agents get hit");
 shared_ptr<ParameterLink<double>> SwarmWorld::penaltyPL = Parameters::register_parameter("WORLD_SWARM-penalty", 0.075, "amount of penalty for hit");
 shared_ptr<ParameterLink<int>> SwarmWorld::waitForGoalPL = Parameters::register_parameter("WORLD_SWARM-waitForGoal", 500, "timestep till the next goal is possible");
@@ -26,6 +27,7 @@ SwarmWorld::SwarmWorld(shared_ptr<ParametersTable> _PT) : AbstractWorld(_PT) {
     gridY = (PT == nullptr) ? gridYSizePL->lookup() : PT->lookupInt("WORLD_SWARM-gridY");
     senseAgents = ((PT == nullptr) ? senseAgentsPL->lookup() : PT->lookupInt("WORLD_SWARM-senseAgents")) == 1;
     resetOutputs = ((PT == nullptr) ? resetOutputsPL->lookup() : PT->lookupInt("WORLD_SWARM-resetOutputs")) == 1;
+    blockWay = ((PT == nullptr) ? blockWayPL->lookup() : PT->lookupInt("WORLD_SWARM-blockWay")) == 1;
     hasPenalty = ((PT == nullptr) ? hasPenaltyPL->lookup() : PT->lookupInt("WORLD_SWARM-hasPenalty")) == 1;
     nAgents = ((PT == nullptr) ? nAgentsPL->lookup() : PT->lookupDouble("WORLD_SWARM-nAgents"));
     convertCSVListToVector(((PT == nullptr) ? senseSidesPL->lookup() : PT->lookupString("WORLD_SWARM-senseSides")), senseSides);
@@ -47,7 +49,8 @@ SwarmWorld::SwarmWorld(shared_ptr<ParametersTable> _PT) : AbstractWorld(_PT) {
     cout << PT->lookupString("WORLD_SWARM-senseSides") << " SenseSides\n";
     cout << penalty << " Penalty\n";
     cout << waitForGoalI << " Waitforgoal\n";
-    
+    cout << blockWay << " Block Way\n";
+    cout << phero << " Phero\n";
     
     // columns to be added to ave file
     aveFileColumns.clear();
@@ -143,9 +146,6 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
             }
             
             int f = facing[idx];
-            pair<int,int> cl = location[idx];
-            
-            
             int stimulis = 0;
             vector<int> o_inputs;
             for(int i=0; i < senseSides.size(); i++) {
@@ -689,6 +689,8 @@ bool SwarmWorld::canMove(pair<int,int> locB) {
     if(!isValid(locB)) {
         move = false;
     } else if(isWall(locB)) {
+        move = false;
+    } else if(blockWay && isAgent(locB)) {
         move = false;
     }
     return move;
