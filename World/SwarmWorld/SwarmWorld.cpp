@@ -80,6 +80,7 @@ void SwarmWorld::buildGrid(){
 
 void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visualize, int debug) {
     int maxOrgs = startSlots.size() * nAgents;
+    collisionCount = 0;
     
     vector<vector<vector<string>>> worldLog;
     vector<vector<int>> states;
@@ -348,12 +349,9 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
         stringstream scorefile_ss;
         scorefile_ss << FileManager::outputDirectory << "/score.csv";
         string scorefile = scorefile_ss.str();
-        
         ofstream scorefile_of;
         scorefile_of.open (scorefile);
-        
-        
-        scorefile_of << globalscore;
+        scorefile_of << globalscore << ";" << collisionCount;
     
         scorefile_of.close();
 
@@ -632,7 +630,7 @@ vector<vector<int>> SwarmWorld::getCM(shared_ptr<MarkovBrain> brain) {
             int val = mat[i][j] > 0;
             // DO NOT ALLOW CONNECTIONS TO INPUTS OR FROM OUTPUTS TO SOMEWHERE
             if(j < requiredInputs()) val = 0;
-            if(i >= requiredInputs() && i < requiredInputs() + requiredOutputs()) val = 0;
+            //if(i >= requiredInputs() && i < requiredInputs() + requiredOutputs()) val = 0;
             
             if (j+1 >= n) {
                 map << val;
@@ -657,8 +655,10 @@ void SwarmWorld::move(int idx, pair<int,int> newloc, int dir) {
         score[idx] +=1;
         waitForGoal[idx] = waitForGoalI;
     }
-    if(hasPenalty && isAgent(newloc)) {
-        score[idx] -=penalty;
+    if(isAgent(newloc)) {
+        collisionCount++;
+        if(hasPenalty) score[idx] -=penalty;
+        if(blockWay) return;
     }
     oldLocation[idx] = location[idx];
     location[idx] = newloc;
@@ -689,8 +689,6 @@ bool SwarmWorld::canMove(pair<int,int> locB) {
     if(!isValid(locB)) {
         move = false;
     } else if(isWall(locB)) {
-        move = false;
-    } else if(blockWay && isAgent(locB)) {
         move = false;
     }
     return move;

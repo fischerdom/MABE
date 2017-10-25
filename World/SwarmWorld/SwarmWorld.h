@@ -55,6 +55,7 @@ public:
     int worldUpdates;
     double penalty;
     int waitForGoalI;
+    int collisionCount;
     
     pair<int,int> avgGoal;
     vector<pair<int,int>> startSlots;
