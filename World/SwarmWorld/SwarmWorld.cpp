@@ -346,12 +346,16 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
         map.close();
         
         //write score
+        double scorewocol = globalscore;
+        if(hasPenalty) {
+            scorewocol = scorewocol + ((penalty * collisionCount) / maxOrgs);
+        }
         stringstream scorefile_ss;
         scorefile_ss << FileManager::outputDirectory << "/score.csv";
         string scorefile = scorefile_ss.str();
         ofstream scorefile_of;
         scorefile_of.open (scorefile);
-        scorefile_of << globalscore << ";" << collisionCount;
+        scorefile_of << globalscore << ";" << collisionCount << ";" << scorewocol;
     
         scorefile_of.close();
 
@@ -628,7 +632,7 @@ vector<vector<int>> SwarmWorld::getCM(shared_ptr<MarkovBrain> brain) {
         for(int j = 0; j < n; j++) {
             //cout << mat[i][j] << " ";
             int val = mat[i][j] > 0;
-            // DO NOT ALLOW CONNECTIONS TO INPUTS OR FROM OUTPUTS TO SOMEWHERE
+            // DO NOT ALLOW CONNECTIONS TO INPUTS
             if(j < requiredInputs()) val = 0;
             //if(i >= requiredInputs() && i < requiredInputs() + requiredOutputs()) val = 0;
             
