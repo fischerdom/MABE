@@ -18,6 +18,7 @@ shared_ptr<ParameterLink<int>> SwarmWorld::blockWayPL = Parameters::register_par
 shared_ptr<ParameterLink<int>> SwarmWorld::hasPenaltyPL = Parameters::register_parameter("WORLD_SWARM-hasPenalty", 1, "1 if penalty when agents get hit");
 shared_ptr<ParameterLink<double>> SwarmWorld::penaltyPL = Parameters::register_parameter("WORLD_SWARM-penalty", 0.075, "amount of penalty for hit");
 shared_ptr<ParameterLink<int>> SwarmWorld::waitForGoalPL = Parameters::register_parameter("WORLD_SWARM-waitForGoal", 500, "timestep till the next goal is possible");
+shared_ptr<ParameterLink<int>> SwarmWorld::hiddenAgentsPL = Parameters::register_parameter("WORLD_SWARM-hiddenAgents", 0, "sensor without response");
 
 SwarmWorld::SwarmWorld(shared_ptr<ParametersTable> _PT) : AbstractWorld(_PT) {
     cout << "Using SwarmWorld \n";
@@ -36,6 +37,7 @@ SwarmWorld::SwarmWorld(shared_ptr<ParametersTable> _PT) : AbstractWorld(_PT) {
     penalty = (PT == nullptr) ? penaltyPL->lookup() : PT->lookupDouble("WORLD_SWARM-penalty");
     phero = ((PT == nullptr) ? senseAgentsPL->lookup() : PT->lookupInt("WORLD_SWARM-phero")) == 1;
     waitForGoalI = (PT == nullptr) ? waitForGoalPL->lookup() : PT->lookupInt("WORLD_SWARM-waitForGoal");
+    hiddenAgents = (PT == nullptr) ? hiddenAgentsPL->lookup() : PT->lookupInt("WORLD_SWARM-hiddenAgents") == 1;
     
     generation = 0;
 
@@ -43,6 +45,7 @@ SwarmWorld::SwarmWorld(shared_ptr<ParametersTable> _PT) : AbstractWorld(_PT) {
     cout << gridX << " X\n";
     cout << gridY << " Y\n";
     cout << senseAgents << " Sensor Agents\n";
+    cout << hiddenAgents << " Hidden Agents\n";
     cout << resetOutputs << " Reset Outputs\n";
     cout << hasPenalty << " Penalty set\n";
     cout << nAgents << " factor agents\n";
@@ -153,7 +156,7 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
                 pair<int,int> loc = getRelativePosition(location[idx], facing[idx], senseSides[i]);
                 o_inputs.push_back(canMove(loc));
                 
-                if(senseAgents) o_inputs.push_back(isAgent(loc));
+                if(senseAgents) o_inputs.push_back(hiddenAgents?0:isAgent(loc));
             }
             if(phero) {
                 for(int i = 1; i <= 4; i++) {
@@ -461,7 +464,7 @@ pair<int,int> SwarmWorld::getRelativePosition(pair<int,int> loc, int facing, int
     int y = loc.second + SwarmWorld::RELPOS[dir][1];
     return {x, y};
 }
-
+/*
 pair<int,int> SwarmWorld::isGoalInSight(pair<int,int>loc, int facing) {
     pair<int,int> ret;
     ret.first = 0;
@@ -485,7 +488,7 @@ pair<int,int> SwarmWorld::isGoalInSight(pair<int,int>loc, int facing) {
             break;
     }
     return ret;
-}
+}*/
 
 
 int SwarmWorld::distance(pair<int, int> a, pair<int,int> b) {

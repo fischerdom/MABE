@@ -32,6 +32,7 @@ public:
     static shared_ptr<ParameterLink<int>> blockWayPL;
     static shared_ptr<ParameterLink<double>> penaltyPL;
     static shared_ptr<ParameterLink<int>> waitForGoalPL;
+    static shared_ptr<ParameterLink<int>> hiddenAgentsPL;
     static shared_ptr<ParameterLink<int>> pheroPL;
     
     int** levelThree();
@@ -56,6 +57,7 @@ public:
     double penalty;
     int waitForGoalI;
     int collisionCount;
+    bool hiddenAgents;
     
     pair<int,int> avgGoal;
     vector<pair<int,int>> startSlots;
