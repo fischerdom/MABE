@@ -18,7 +18,8 @@
 #include "World/IPDWorld/IPDWorld.h"
 #include "World/SOFWorld/SOFWorld.h"
 #include "World/SwarmWorld/SwarmWorld.h"
-#include "World/SwarmWorld2/SwarmWorld2.h"
+#include "World/Swarm2World/Swarm2World.h"
+#include "World/Swarm3World/Swarm3World.h"
 #include "Genome/CircularGenome/CircularGenome.h"
 #include "Genome/MultiGenome/MultiGenome.h"
 #include "Brain/MarkovBrain/MarkovBrain.h"
@@ -64,7 +65,11 @@ shared_ptr<AbstractWorld> makeWorld(shared_ptr<ParametersTable> PT = Parameters:
     found = true;
   }
     if (worldType == "Swarm2") {
-        newWorld = make_shared<SwarmWorld2>(PT);
+        newWorld = make_shared<Swarm2World>(PT);
+        found = true;
+    }
+    if (worldType == "Swarm3") {
+        newWorld = make_shared<Swarm3World>(PT);
         found = true;
     }
   if (!found){

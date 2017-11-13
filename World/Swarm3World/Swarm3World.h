@@ -1,7 +1,7 @@
 
 
-#ifndef __BasicMarkovBrainTemplate__WorldSwarm2__
-#define __BasicMarkovBrainTemplate__WorldSwarm2__
+#ifndef __BasicMarkovBrainTemplate__WorldSwarm3__
+#define __BasicMarkovBrainTemplate__WorldSwarm3__
 
 #include "../AbstractWorld.h"
 
@@ -13,7 +13,7 @@
 
 using namespace std;
 
-class SwarmWorld2 : public AbstractWorld {
+class Swarm3World : public AbstractWorld {
     
 public:
     
@@ -29,18 +29,21 @@ public:
     static shared_ptr<ParameterLink<double>> nAgentsPL;
     static shared_ptr<ParameterLink<string>> senseSidesPL;
     static shared_ptr<ParameterLink<int>> resetOutputsPL;
+    static shared_ptr<ParameterLink<int>> blockWayPL;
     static shared_ptr<ParameterLink<double>> penaltyPL;
     static shared_ptr<ParameterLink<int>> waitForGoalPL;
+    static shared_ptr<ParameterLink<int>> hiddenAgentsPL;
+    static shared_ptr<ParameterLink<int>> pheroPL;
     
-    int** levelThree();
+    int** loadLevel();
     
     int generation;
     bool senseAgents;
     bool resetOutputs;
     bool hasPenalty;
+    bool blockWay;
+    bool phero;
     double nAgents;
-    double penalty;
-    int waitForGoalI;
     vector<int> senseSides;
     
     
@@ -49,18 +52,24 @@ public:
     int **waterMap;
     int **bridgeMap;
     int **agentMap;
+    double **pheroMap;
     int worldUpdates;
+    double penalty;
+    int waitForGoalI;
+    int collisionCount;
+    bool hiddenAgents;
     
     pair<int,int> avgGoal;
     vector<pair<int,int>> startSlots;
     vector<pair<int,int>> location;
     vector<pair<int,int>> oldLocation;
     vector<double> score;
+    vector<double> penalties;
     vector<double> waitForGoal;
     vector<int> facing;
     
-    SwarmWorld2(shared_ptr<ParametersTable> _PT = nullptr);
-    virtual ~SwarmWorld2() = default;
+    Swarm3World(shared_ptr<ParametersTable> _PT = nullptr);
+    virtual ~Swarm3World() = default;
     
     //virtual void evaluate(map<string, shared_ptr<Group>>& groups, int analyse = 0, int visualize = 0, int debug = 0)override;
     virtual void evaluateSolo(shared_ptr<Organism> org, int analyse, int visualize, int debug) override;
@@ -73,6 +82,7 @@ public:
     //virtual int minOrgsAllowed();
     
     int** zeros(int x, int y);
+    double** zerosDouble(int x, int y);
     void showMat(int** mat, int x, int y);
     void writeMap();
     
@@ -88,6 +98,7 @@ public:
     pair<int,int> isGoalInSight(pair<int,int>loc, int facing);
     
     void move(int idx, pair<int,int> newloc, int dir);
+    void decay();
     bool canMove(pair<int,int> locB);
     
     
@@ -101,4 +112,4 @@ public:
     vector<vector<int>> getCM(shared_ptr<MarkovBrain> brain);
 };
 
-#endif /* defined(__BasicMarkovBrainTemplate__WorldSwarm2__) */
+#endif /* defined(__BasicMarkovBrainTemplate__WorldSwarm__) */
