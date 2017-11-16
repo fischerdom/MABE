@@ -12,14 +12,11 @@
 
 #ifndef __AutoBuild__Modules__
 #define __AutoBuild__Modules__
-#include "World/BerryWorld/BerryWorld.h"
+#include "World/SwarmWorld/SwarmWorld.h"
 #include "World/NumeralClassifierWorld/NumeralClassifierWorld.h"
 #include "World/TestWorld/TestWorld.h"
 #include "World/IPDWorld/IPDWorld.h"
 #include "World/SOFWorld/SOFWorld.h"
-#include "World/SwarmWorld/SwarmWorld.h"
-#include "World/Swarm2World/Swarm2World.h"
-#include "World/Swarm3World/Swarm3World.h"
 #include "Genome/CircularGenome/CircularGenome.h"
 #include "Genome/MultiGenome/MultiGenome.h"
 #include "Brain/MarkovBrain/MarkovBrain.h"
@@ -40,8 +37,8 @@ shared_ptr<AbstractWorld> makeWorld(shared_ptr<ParametersTable> PT = Parameters:
   shared_ptr<AbstractWorld> newWorld;
   bool found = false;
   string worldType = (PT == nullptr) ? AbstractWorld::worldTypePL->lookup() : PT->lookupString("WORLD-worldType");
-  if (worldType == "Berry") {
-    newWorld = make_shared<BerryWorld>(PT);
+  if (worldType == "Swarm") {
+    newWorld = make_shared<SwarmWorld>(PT);
     found = true;
     }
   if (worldType == "NumeralClassifier") {
@@ -55,22 +52,10 @@ shared_ptr<AbstractWorld> makeWorld(shared_ptr<ParametersTable> PT = Parameters:
   if (worldType == "IPD") {
     newWorld = make_shared<IPDWorld>(PT);
     found = true;
-  }
-    if (worldType == "SOF") {
-        newWorld = make_shared<SOFWorld>(PT);
-        found = true;
     }
-  if (worldType == "Swarm") {
-    newWorld = make_shared<SwarmWorld>(PT);
+  if (worldType == "SOF") {
+    newWorld = make_shared<SOFWorld>(PT);
     found = true;
-  }
-    if (worldType == "Swarm2") {
-        newWorld = make_shared<Swarm2World>(PT);
-        found = true;
-    }
-    if (worldType == "Swarm3") {
-        newWorld = make_shared<Swarm3World>(PT);
-        found = true;
     }
   if (!found){
     cout << "  ERROR! could not find WORLD-worldType \"" << worldType << "\".\n  Exiting." << endl;
@@ -194,8 +179,8 @@ void configureDefaultsAndDocumentation(){
   Parameters::root->setParameter("OPTIMIZER-optimizer", (string)"GA");
   Parameters::root->setDocumentation("OPTIMIZER-optimizer", "optimizer to be used, [GA, Tournament, Tournament2]");
 
-  Parameters::root->setParameter("WORLD-worldType", (string)"Berry");
-  Parameters::root->setDocumentation("WORLD-worldType","world to be used, [Berry, NumeralClassifier, Test, IPD, SOF]");
+  Parameters::root->setParameter("WORLD-worldType", (string)"Swarm");
+  Parameters::root->setDocumentation("WORLD-worldType","world to be used, [Swarm, NumeralClassifier, Test, IPD, SOF]");
 }
 
 

@@ -84,14 +84,14 @@ void SwarmWorld::buildGrid(){
 
 void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visualize, int debug) {
     int maxOrgs = startSlots.size() * nAgents;
+    //visualize = 0;
+    //mt19937 generator(Global::randomSeedPL->lookup());
     
-    mt19937 generator(Global::randomSeedPL->lookup());
+    //vector<int> startSlotsRandom;
+    //for (int i=0; i<startSlots.size(); i++) startSlotsRandom.push_back(i);
+    //shuffle ( startSlotsRandom.begin(), startSlotsRandom.end(), generator);
     
-    vector<int> startSlotsRandom;
-    for (int i=0; i<startSlots.size(); i++) startSlotsRandom.push_back(i);
-    shuffle ( startSlotsRandom.begin(), startSlotsRandom.end(), generator);
-    
-    uniform_int_distribution<> facing_dis(0,3);
+    //uniform_int_distribution<> facing_dis(0,3);
    
     collisionCount = 0;
     
@@ -100,7 +100,7 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
     vector<int> states_count;
     vector<vector<int>> oldStates;
     
-    if(phero) this->pheroMap = SwarmWorld::zerosDouble(this->gridX, this->gridY);
+    //if(phero) this->pheroMap = SwarmWorld::zerosDouble(this->gridX, this->gridY);
     this->agentMap = SwarmWorld::zeros(this->gridX, this->gridY);
     
     // INIT LOG
@@ -132,29 +132,29 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
         oldLocation.push_back({-1,-1});
         score.push_back(0);
         
-        facing.push_back(START_FACING[facing_dis(generator)]);
+        facing.push_back(START_FACING[idx % 4]);
 
         
         waitForGoal.push_back(0);
         oldStates.push_back(vector<int>());
         
-        move(idx,startSlots[startSlotsRandom[idx]], 1);
+        move(idx,startSlots[int(idx*(startSlots.size()/float(maxOrgs)))], 1);
     }
     
     int nNodes = (int)dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes.size();
-    
+    vector<int> orgsRandom;
     for (int t = 0; t < worldUpdates; t++) {
-        if(phero) decay();
+        //if(phero) decay();
         //cout << "\n";
         
         
-        vector<int> orgsRandom;
-        for (int i=0; i<maxOrgs; i++) orgsRandom.push_back(i);
-        shuffle ( orgsRandom.begin(), orgsRandom.end(), generator);
+        //orgsRandom.clear();
+        //for (int idxRand=0; idxRand<maxOrgs; idxRand++) orgsRandom.push_back(idxRand);
+        //shuffle ( orgsRandom.begin(), orgsRandom.end(), generator);
         
         
-        for (int idxA = 0; idxA < maxOrgs; idxA++) {
-            int idx = orgsRandom[idxA];
+        for (int idx = 0; idx < maxOrgs; idx++) {
+            //int idx = orgsRandom[idxA];
             
             // SET SHARED BRAIN TO OLD STATE
             if(oldStates[idx].size()==nNodes) {
@@ -180,20 +180,19 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
                 
                 if(senseAgents) o_inputs.push_back(hiddenAgents?0:isAgent(loc));
             }
-            if(phero) {
+            /*if(phero) {
                 for(int i = 1; i <= 4; i++) {
                     pair<int,int> loc = getRelativePosition(location[idx], facing[idx], i);
                     if(isValid(loc))
                     //o_inputs.push_back(Random::P(pheroMap[loc.first][loc.second]));
                         o_inputs.push_back(pheroMap[loc.first][loc.second] > 0.5);
                 }
-                
-            }
+            }*/
 
             
             for(int j = 0; j < o_inputs.size(); j++) {
                 dynamic_pointer_cast<MarkovBrain>(org->brain)->setInput(j, o_inputs[j]);
-                stimulis += o_inputs[j];
+                //stimulis += o_inputs[j];
                 //cout << inputs[j] << " ";
             }
             
@@ -234,14 +233,17 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
             //}
             
             oldStates[idx].clear();
-            for(int i = 0; i < nNodes; i++) {
-                oldStates[idx].push_back(dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[i]);
+            for(int idxState = 0; idxState < nNodes; idxState++) {
+                oldStates[idx].push_back(dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[idxState]);
+            }
+            for (int i = 0; i < o_inputs.size(); i++) {
+                oldStates[idx][i] = o_inputs[i];
             }
         }
         
-        
-        // TRACK POSITIONS
         if(visualize) {
+            
+            // TRACK POSITIONS
             for(int i = 0; i < maxOrgs; i++) {
                 worldLog[i][0][t] = (to_string(location[i].first));
                 worldLog[i][1][t] = (to_string(location[i].second));
@@ -249,23 +251,22 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
                 worldLog[i][3][t] = (to_string(score[i]));
                 
                 
-               
-                vector<int> state;
-                for(int i = 0; i < nNodes; i++) {
-                    state.push_back(dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[i]>0?1:0);
-                }
+                //TRACK STATES
+                vector<int> state = oldStates[i];
+                for(int j = 0; j < state.size(); j++) state[j] = ((int)state[j] > 0);
+                
                 bool f = false;
                 int f_idx = -1;
-                for(int i = 0; i < states.size(); i++) {
+                for(int j = 0; j < states.size(); j++) {
                     f = true;
-                    for(int j = 0; j < states[i].size(); j++) {
-                        if(states[i][j] != state[j]) {
+                    for(int k = 0; k < states[j].size(); k++) {
+                        if(states[j][k] != state[k]) {
                             f = false;
                             break;
                         }
                     }
                     if(f) {
-                        f_idx = i;
+                        f_idx = j;
                         break;
                     }
                 }
@@ -299,6 +300,7 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
         
         // WRITE STATES
         //SORT
+        
         for(int i = 0; i < states.size(); i++) {
             for(int j = 0; j < states.size(); j++) {
                 if(states_count[j] > states_count[i]) {
@@ -393,7 +395,7 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
     // CLEAN UP
     for (int i = 0; i < gridX ; ++i){
         delete [] this->agentMap[i];
-        if(phero) delete [] this->pheroMap[i];
+        //if(phero) delete [] this->pheroMap[i];
     }
     
     location.clear();
@@ -409,7 +411,7 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
 }
 
 int SwarmWorld::requiredInputs() {
-    return (senseSides.size() * (senseAgents?2:1)) + (phero?4:0); // moving + bridge + goal + comm
+    return (senseSides.size() * (senseAgents?2:1));//+ (phero?4:0); // moving + bridge + goal + comm
     //return groupSize * 12;
 }
 int SwarmWorld::requiredOutputs() {
@@ -607,9 +609,9 @@ int ** SwarmWorld::getTPM(shared_ptr<MarkovBrain> brain) {
         for(int j = 0; j < n; j++) {
             if(j < brain->inputValues.size()) {
                 brain->inputValues[j] = array[j];
-            //} else if (j>=brain->inputValues.size() && j < brain->inputValues.size() + 2) {
+            } else if (resetOutputs && j>=brain->inputValues.size() && j < brain->inputValues.size() + 2) {
                 // MAKE SURE THAT OUTPUTS WILL NOT CAUSE ANYTHING (PYPHI-STUFF)
-            //    brain->nodes[j] = 0;
+                brain->nodes[j] = 0;
             } else {
                 // HIDDEN NODES
                 brain->nodes[j] = array[j];
@@ -618,7 +620,9 @@ int ** SwarmWorld::getTPM(shared_ptr<MarkovBrain> brain) {
         brain->update();
         for(int j = 0; j < n; j++) {
             int val = brain->nodes[j];
-            
+            if(j < brain->inputValues.size()) {
+                val = array[j];
+            }
             mat[j][i] = (val>0?1:0);
         }
     }
@@ -680,11 +684,11 @@ vector<vector<int>> SwarmWorld::getCM(shared_ptr<MarkovBrain> brain) {
 
 void SwarmWorld::move(int idx, pair<int,int> newloc, int dir) {
     
-    waitForGoal[idx] --;
     if(isGoal(newloc) && waitForGoal[idx]<=0) {
         score[idx] +=1;
         waitForGoal[idx] = waitForGoalI;
     }
+    waitForGoal[idx] --;
     if(isAgent(newloc)) {
         collisionCount++;
         if(hasPenalty) score[idx] -=penalty;
@@ -694,7 +698,7 @@ void SwarmWorld::move(int idx, pair<int,int> newloc, int dir) {
     location[idx] = newloc;
     
     agentMap[newloc.first][newloc.second] += 1;
-    if(phero) pheroMap[newloc.first][newloc.second] = 1;
+    //if(phero) pheroMap[newloc.first][newloc.second] = 1;
     if(oldLocation[idx].first > 0 && oldLocation[idx].second > 0) {
         agentMap[oldLocation[idx].first][oldLocation[idx].second] -= 1;
     }

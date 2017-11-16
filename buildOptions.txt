@@ -1,5 +1,5 @@
 % World
-  * Berry
+  * Swarm
   + NumeralClassifier
   + Test
   + IPD
