@@ -110,7 +110,7 @@ public:
     int distance(pair<int,int> a, pair<int,int> b);
     
     
-    int ** getTPM(shared_ptr<MarkovBrain> brain);
+    double ** getTPM(shared_ptr<MarkovBrain> brain);
     vector<vector<int>> getCM(shared_ptr<MarkovBrain> brain);
 };
 

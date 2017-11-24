@@ -111,11 +111,13 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
             worldLog[i].push_back(vector<string>()); // Y
             worldLog[i].push_back(vector<string>()); // F
             worldLog[i].push_back(vector<string>()); // S
+            worldLog[i].push_back(vector<string>()); // State
             for (int j = 0; j < worldUpdates; j++) {
                 worldLog[i][0].push_back("-1");
                 worldLog[i][1].push_back("-1");
                 worldLog[i][2].push_back("1");
                 worldLog[i][3].push_back("0");
+                worldLog[i][4].push_back("0");
             }
             
         }
@@ -126,6 +128,12 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
     // PLACE AGENTS
     
     org->brain->resetBrain();
+    vector<int> emptyState;
+    
+    int nNodes = (int)dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes.size();
+    for (int i = 0; i<nNodes;i++) {
+        emptyState.push_back(0);
+    }
     for (int idx = 0; idx < maxOrgs; idx++) {
         
         location.push_back({-1,-1});
@@ -136,12 +144,12 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
 
         
         waitForGoal.push_back(0);
-        oldStates.push_back(vector<int>());
+        
+        oldStates.push_back(emptyState);
         
         move(idx,startSlots[int(idx*(startSlots.size()/float(maxOrgs)))], 1);
     }
     
-    int nNodes = (int)dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes.size();
     vector<int> orgsRandom;
     for (int t = 0; t < worldUpdates; t++) {
         //if(phero) decay();
@@ -172,7 +180,6 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
             }
             
             int f = facing[idx];
-            int stimulis = 0;
             vector<int> o_inputs;
             for(int i=0; i < senseSides.size(); i++) {
                 pair<int,int> loc = getRelativePosition(location[idx], facing[idx], senseSides[i]);
@@ -198,6 +205,31 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
             
             //cout << stimulis << " stimulis for organism " << orgIndex << " set \n";
             
+            //TRACK STATES
+            if(visualize && t>0) {
+                vector<int> state = oldStates[idx];
+                for(int j = 0; j < state.size(); j++) state[j] = (int)dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[j] > 0;
+                
+                bool f = false; int f_idx = -1;
+                for(int j = 0; j < states.size(); j++) {
+                    f = true;
+                    for(int k = 0; k < states[j].size(); k++) {
+                        if(states[j][k] != state[k]) {
+                            f = false; break;
+                        }
+                    }
+                    if(f) {
+                        f_idx = j; break;
+                    }
+                }
+                if(f_idx != -1) { states_count[f_idx]++;
+                } else {
+                    states.push_back(state);
+                    states_count.push_back(1);
+                }
+            }
+            
+            
             // UPDATE BRAINS
             dynamic_pointer_cast<MarkovBrain>(org->brain)->update();
             vector<int> outputs;
@@ -205,8 +237,15 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
             for(int i=0; i < requiredOutputs(); i++) {
                 outputs.push_back(Bit(org->brain->readOutput(i)));
             }
-            int new_dir = 0;
             
+            if(visualize) {
+                stringstream statelog;
+                for(int iInputs = 0; iInputs < o_inputs.size(); iInputs++) statelog << o_inputs[iInputs] << " ";
+                statelog << outputs[0] << " " << outputs[1];
+                worldLog[idx][4][t] = (statelog.str());
+            }
+            
+            int new_dir = 0;
             if(outputs[0] == 1 &&  outputs[1] == 0) {
                 f = (f - 2) % 8;
                 if (f < 0) f+=8;
@@ -216,7 +255,6 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
             } else if (outputs[0] == 1 &&  outputs[1] == 1) {
                 new_dir = 1;
             }
-            
             facing[idx] = f;
             
             
@@ -249,34 +287,6 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
                 worldLog[i][1][t] = (to_string(location[i].second));
                 worldLog[i][2][t] = (to_string(facing[i]));
                 worldLog[i][3][t] = (to_string(score[i]));
-                
-                
-                //TRACK STATES
-                vector<int> state = oldStates[i];
-                for(int j = 0; j < state.size(); j++) state[j] = ((int)state[j] > 0);
-                
-                bool f = false;
-                int f_idx = -1;
-                for(int j = 0; j < states.size(); j++) {
-                    f = true;
-                    for(int k = 0; k < states[j].size(); k++) {
-                        if(states[j][k] != state[k]) {
-                            f = false;
-                            break;
-                        }
-                    }
-                    if(f) {
-                        f_idx = j;
-                        break;
-                    }
-                }
-                if(f_idx != -1) {
-                    states_count[f_idx]++;
-                } else {
-                    states.push_back(state);
-                    states_count.push_back(1);
-                }
-                
             }
             
             
@@ -348,7 +358,7 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
         
         ofstream map;
         map.open (pos_file);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             for(int j = 0; j < maxOrgs; j++) {
                 stringstream val;
                 val << '"';
@@ -588,12 +598,12 @@ void SwarmWorld::writeMap() {
     map.close();
 }
 
-int ** SwarmWorld::getTPM(shared_ptr<MarkovBrain> brain) {
+double ** SwarmWorld::getTPM(shared_ptr<MarkovBrain> brain) {
     
     // EXPECT THAT HIDDEN NODES ARE IN THE END OF THE NODE LIST (VERIFIED)
     int n = brain->nrNodes;
     int n_states = pow(2,n);
-    int** mat = zeros(n, n_states);
+    double** mat = zerosDouble(n, n_states);
     
     
     for (int i = 0; i < n_states; i++) {
@@ -621,9 +631,12 @@ int ** SwarmWorld::getTPM(shared_ptr<MarkovBrain> brain) {
         for(int j = 0; j < n; j++) {
             int val = brain->nodes[j];
             if(j < brain->inputValues.size()) {
-                val = array[j];
+                //val = array[j];
+                mat[j][i] = 0.5;
+            } else {
+                mat[j][i] = (val>0?1:0);
             }
-            mat[j][i] = (val>0?1:0);
+            
         }
     }
     
