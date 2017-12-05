@@ -106,6 +106,7 @@ public:
     
     //void placeAgent(int idx, pair<int,int> oldloc, pair<int,int> loc, int group, shared_ptr<Organism2D> org);
     pair<int,int> getRelativePosition(pair<int,int> loc, int facing, int direction);
+    vector<pair<int,int>> getInnerPosition(pair<int,int> loc);
     
     int distance(pair<int,int> a, pair<int,int> b);
     

@@ -87,337 +87,364 @@ void SwarmWorld::evaluateSolo(shared_ptr<Organism> org, int analyse, int visuali
     //visualize = 0;
     //mt19937 generator(Global::randomSeedPL->lookup());
     
-    //vector<int> startSlotsRandom;
-    //for (int i=0; i<startSlots.size(); i++) startSlotsRandom.push_back(i);
-    //shuffle ( startSlotsRandom.begin(), startSlotsRandom.end(), generator);
-    
-    //uniform_int_distribution<> facing_dis(0,3);
-   
-    collisionCount = 0;
-    
-    vector<vector<vector<string>>> worldLog;
-    vector<vector<int>> states;
-    vector<int> states_count;
-    vector<vector<int>> oldStates;
-    
-    //if(phero) this->pheroMap = SwarmWorld::zerosDouble(this->gridX, this->gridY);
-    this->agentMap = SwarmWorld::zeros(this->gridX, this->gridY);
-    
-    // INIT LOG
-    if(visualize) {
-        for (int i = 0; i < maxOrgs; i++) {
-            worldLog.push_back(vector<vector<string>>());
-            worldLog[i].push_back(vector<string>()); // X
-            worldLog[i].push_back(vector<string>()); // Y
-            worldLog[i].push_back(vector<string>()); // F
-            worldLog[i].push_back(vector<string>()); // S
-            worldLog[i].push_back(vector<string>()); // State
-            for (int j = 0; j < worldUpdates; j++) {
-                worldLog[i][0].push_back("-1");
-                worldLog[i][1].push_back("-1");
-                worldLog[i][2].push_back("1");
-                worldLog[i][3].push_back("0");
-                worldLog[i][4].push_back("0");
+    //double randomGlobalScore = 0;
+    //for (int randomRepeat=0; randomRepeat< 1; randomRepeat++) { // START RANDOM LOOP
+        //vector<int> startSlotsRandom;
+        //for (int i=0; i<startSlots.size(); i++) startSlotsRandom.push_back(i);
+        //shuffle ( startSlotsRandom.begin(), startSlotsRandom.end(), generator);
+        
+        //uniform_int_distribution<> facing_dis(0,3);
+       
+        collisionCount = 0;
+        
+        vector<vector<vector<string>>> worldLog;
+        
+        vector<vector<int>> states;
+        vector<int> states_count;
+        vector<vector<int>> oldStates;
+        
+        //if(phero) this->pheroMap = SwarmWorld::zerosDouble(this->gridX, this->gridY);
+        this->agentMap = SwarmWorld::zeros(this->gridX, this->gridY);
+        
+        // INIT LOG
+        if(visualize) {
+            for (int i = 0; i < maxOrgs; i++) {
+                worldLog.push_back(vector<vector<string>>());
+                worldLog[i].push_back(vector<string>()); // X
+                worldLog[i].push_back(vector<string>()); // Y
+                worldLog[i].push_back(vector<string>()); // F
+                worldLog[i].push_back(vector<string>()); // State for R
+                worldLog[i].push_back(vector<string>()); // State
+                for (int j = 0; j < worldUpdates; j++) {
+                    worldLog[i][0].push_back("-1");
+                    worldLog[i][1].push_back("-1");
+                    worldLog[i][2].push_back("1");
+                    worldLog[i][3].push_back("0");
+                    worldLog[i][4].push_back("0");
+                }
+                
             }
             
         }
         
-    }
-    
-    
-    // PLACE AGENTS
-    
-    org->brain->resetBrain();
-    vector<int> emptyState;
-    
-    int nNodes = (int)dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes.size();
-    for (int i = 0; i<nNodes;i++) {
-        emptyState.push_back(0);
-    }
-    for (int idx = 0; idx < maxOrgs; idx++) {
         
-        location.push_back({-1,-1});
-        oldLocation.push_back({-1,-1});
-        score.push_back(0);
+        // PLACE AGENTS
         
-        facing.push_back(START_FACING[idx % 4]);
-
+        org->brain->resetBrain();
+        vector<int> emptyState;
         
-        waitForGoal.push_back(0);
-        
-        oldStates.push_back(emptyState);
-        
-        move(idx,startSlots[int(idx*(startSlots.size()/float(maxOrgs)))], 1);
-    }
-    
-    vector<int> orgsRandom;
-    for (int t = 0; t < worldUpdates; t++) {
-        //if(phero) decay();
-        //cout << "\n";
-        
-        
-        //orgsRandom.clear();
-        //for (int idxRand=0; idxRand<maxOrgs; idxRand++) orgsRandom.push_back(idxRand);
-        //shuffle ( orgsRandom.begin(), orgsRandom.end(), generator);
-        
-        
+        int nNodes = (int)dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes.size();
+        for (int i = 0; i<nNodes;i++) {
+            emptyState.push_back(0);
+        }
         for (int idx = 0; idx < maxOrgs; idx++) {
-            //int idx = orgsRandom[idxA];
             
-            // SET SHARED BRAIN TO OLD STATE
-            if(oldStates[idx].size()==nNodes) {
-                for(int i = 0; i < nNodes ; i++) {
-                    dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[i] = oldStates[idx][i];
-                }
-            }
+            location.push_back({-1,-1});
+            oldLocation.push_back({-1,-1});
+            score.push_back(0);
             
-            // RESET OUTPUTS TO ZERO, TO AVOID CONNECTIONS FROM OUTPUT TO HIDDEN/INPUT
-            if(resetOutputs) {
-                org->brain->setOutput(0, 0);
-                org->brain->setOutput(1, 0);
-                dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[requiredInputs()] = 0;
-                dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[requiredInputs() + 1] = 0;
-            }
-            
-            int f = facing[idx];
-            vector<int> o_inputs;
-            for(int i=0; i < senseSides.size(); i++) {
-                pair<int,int> loc = getRelativePosition(location[idx], facing[idx], senseSides[i]);
-                o_inputs.push_back(canMove(loc));
-                
-                if(senseAgents) o_inputs.push_back(hiddenAgents?0:isAgent(loc));
-            }
-            /*if(phero) {
-                for(int i = 1; i <= 4; i++) {
-                    pair<int,int> loc = getRelativePosition(location[idx], facing[idx], i);
-                    if(isValid(loc))
-                    //o_inputs.push_back(Random::P(pheroMap[loc.first][loc.second]));
-                        o_inputs.push_back(pheroMap[loc.first][loc.second] > 0.5);
-                }
-            }*/
+            facing.push_back(START_FACING[idx % 4]);
 
             
-            for(int j = 0; j < o_inputs.size(); j++) {
-                dynamic_pointer_cast<MarkovBrain>(org->brain)->setInput(j, o_inputs[j]);
-                //stimulis += o_inputs[j];
-                //cout << inputs[j] << " ";
-            }
+            waitForGoal.push_back(0);
             
-            //cout << stimulis << " stimulis for organism " << orgIndex << " set \n";
+            oldStates.push_back(emptyState);
             
-            //TRACK STATES
-            if(visualize && t>0) {
-                vector<int> state = oldStates[idx];
-                for(int j = 0; j < state.size(); j++) state[j] = (int)dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[j] > 0;
+            move(idx,startSlots[int(idx*(startSlots.size()/float(maxOrgs)))], 1);
+            //move(idx,startSlots[startSlotsRandom[int(idx*(startSlots.size()/float(maxOrgs)))]], 1);
+        }
+        
+        //vector<int> orgsRandom;
+        for (int t = 0; t < worldUpdates; t++) {
+            //if(phero) decay();
+            //cout << "\n";
+            
+            
+            //orgsRandom.clear();
+            //for (int idxRand=0; idxRand<maxOrgs; idxRand++) orgsRandom.push_back(idxRand);
+            //shuffle ( orgsRandom.begin(), orgsRandom.end(), generator);
+            
+            
+            for (int idx = 0; idx < maxOrgs; idx++) {
+                //int idx = orgsRandom[idxA];
                 
-                bool f = false; int f_idx = -1;
-                for(int j = 0; j < states.size(); j++) {
-                    f = true;
-                    for(int k = 0; k < states[j].size(); k++) {
-                        if(states[j][k] != state[k]) {
-                            f = false; break;
+                // SET SHARED BRAIN TO OLD STATE
+                if(oldStates[idx].size()==nNodes) {
+                    for(int i = 0; i < nNodes ; i++) {
+                        dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[i] = oldStates[idx][i];
+                    }
+                }
+                
+                // RESET OUTPUTS TO ZERO, TO AVOID CONNECTIONS FROM OUTPUT TO HIDDEN/INPUT
+                if(resetOutputs) {
+                    org->brain->setOutput(0, 0);
+                    org->brain->setOutput(1, 0);
+                    dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[requiredInputs()] = 0;
+                    dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[requiredInputs() + 1] = 0;
+                }
+                
+                int f = facing[idx];
+                vector<int> o_inputs;
+                for(int i=0; i < senseSides.size(); i++) {
+                    pair<int,int> loc = getRelativePosition(location[idx], facing[idx], senseSides[i]);
+                    o_inputs.push_back(canMove(loc));
+                    
+                    if(senseAgents) o_inputs.push_back(hiddenAgents?0:isAgent(loc));
+                }
+                /*if(phero) {
+                    for(int i = 1; i <= 4; i++) {
+                        pair<int,int> loc = getRelativePosition(location[idx], facing[idx], i);
+                        if(isValid(loc))
+                        //o_inputs.push_back(Random::P(pheroMap[loc.first][loc.second]));
+                            o_inputs.push_back(pheroMap[loc.first][loc.second] > 0.5);
+                    }
+                }*/
+
+                
+                for(int j = 0; j < o_inputs.size(); j++) {
+                    dynamic_pointer_cast<MarkovBrain>(org->brain)->setInput(j, o_inputs[j]);
+                    //stimulis += o_inputs[j];
+                    //cout << inputs[j] << " ";
+                }
+                
+                //cout << stimulis << " stimulis for organism " << orgIndex << " set \n";
+                
+                //TRACK STATES
+                if(visualize && t>0) {
+                    vector<int> state = oldStates[idx];
+                    for(int j = 0; j < state.size(); j++) state[j] = (int)dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[j] > 0;
+                    
+                    bool f = false; int f_idx = -1;
+                    for(int j = 0; j < states.size(); j++) {
+                        f = true;
+                        for(int k = 0; k < states[j].size(); k++) {
+                            if(states[j][k] != state[k]) {
+                                f = false; break;
+                            }
+                        }
+                        if(f) {
+                            f_idx = j; break;
                         }
                     }
-                    if(f) {
-                        f_idx = j; break;
+                    if(f_idx != -1) { states_count[f_idx]++;
+                    } else {
+                        states.push_back(state);
+                        states_count.push_back(1);
                     }
                 }
-                if(f_idx != -1) { states_count[f_idx]++;
-                } else {
-                    states.push_back(state);
-                    states_count.push_back(1);
+                
+                
+                // UPDATE BRAINS
+                dynamic_pointer_cast<MarkovBrain>(org->brain)->update();
+                vector<int> outputs;
+                
+                for(int i=0; i < requiredOutputs(); i++) {
+                    outputs.push_back(Bit(org->brain->readOutput(i)));
                 }
-            }
-            
-            
-            // UPDATE BRAINS
-            dynamic_pointer_cast<MarkovBrain>(org->brain)->update();
-            vector<int> outputs;
-            
-            for(int i=0; i < requiredOutputs(); i++) {
-                outputs.push_back(Bit(org->brain->readOutput(i)));
+                
+                if(visualize) {
+                    stringstream statelog;
+                    string del = "";
+                    for(int iInputs = 0; iInputs < o_inputs.size(); iInputs++) statelog << o_inputs[iInputs] << del;
+                    statelog << outputs[0] << del << outputs[1];
+                    worldLog[idx][4][t] = (statelog.str());
+                    
+                    // STATE LOG FOR R
+                    vector<int> environmentStates;
+                    
+                    stringstream statelogR;
+                    vector<pair<int,int>> innerPositions = getInnerPosition(location[idx]);
+                    stringstream statelogR_E;
+                    //E
+                    for(int iE = 0; iE < innerPositions.size(); iE++) statelogR_E << (int) !isWall(innerPositions[iE]) << del;
+                    for(int iE = 0; iE < innerPositions.size(); iE++) statelogR_E << (int) isAgent(innerPositions[iE]) << del;
+                    //statelogR_E << (int)isAgent(getRelativePosition(location[idx], facing[idx], 1)) && hiddenAgents;
+                    statelogR << stoi(statelogR_E.str(), nullptr, 2) << "-";
+                    
+                    //S
+                    stringstream statelogR_I;
+                    for(int iInputs = 0; iInputs < o_inputs.size(); iInputs++) statelogR_I << o_inputs[iInputs] << del;
+                    
+                    statelogR << stoi(statelogR_I.str(), nullptr, 2) << "-";
+                    //M
+                    stringstream statelogR_M;
+                    statelogR_M << outputs[0]<< outputs[1];
+                    statelogR << stoi(statelogR_M.str(), nullptr, 2);
+                    worldLog[idx][3][t] = (statelogR.str());
+                }
+                
+                int new_dir = 0;
+                if(outputs[0] == 1 &&  outputs[1] == 0) {
+                    f = (f - 2) % 8;
+                    if (f < 0) f+=8;
+                } else if (outputs[0] == 0 &&  outputs[1] == 1) {
+                    f = (f + 2) % 8;
+                    if (f < 0) f+=8;
+                } else if (outputs[0] == 1 &&  outputs[1] == 1) {
+                    new_dir = 1;
+                }
+                //cout <<outputs[0]<<outputs[1] << "\n";
+                facing[idx] = f;
+                
+                
+                if(new_dir != 0) {
+                    pair<int,int> new_pos = getRelativePosition(location[idx], facing[idx], new_dir);
+                    if(canMove(new_pos)) {
+                        move(idx, new_pos, f);
+                    }
+                }
+                // SET SHARED BRAIN TO OLD STATE
+               
+                //for(int i = 0; i < oldStates[idx].size(); i++) {
+                //    oldStates[idx][i].clear();
+                //}
+                
+                oldStates[idx].clear();
+                for(int idxState = 0; idxState < nNodes; idxState++) {
+                    oldStates[idx].push_back(dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[idxState]);
+                }
+                for (int i = 0; i < o_inputs.size(); i++) {
+                    oldStates[idx][i] = o_inputs[i];
+                }
             }
             
             if(visualize) {
-                stringstream statelog;
-                for(int iInputs = 0; iInputs < o_inputs.size(); iInputs++) statelog << o_inputs[iInputs] << " ";
-                statelog << outputs[0] << " " << outputs[1];
-                worldLog[idx][4][t] = (statelog.str());
-            }
-            
-            int new_dir = 0;
-            if(outputs[0] == 1 &&  outputs[1] == 0) {
-                f = (f - 2) % 8;
-                if (f < 0) f+=8;
-            } else if (outputs[0] == 0 &&  outputs[1] == 1) {
-                f = (f + 2) % 8;
-                if (f < 0) f+=8;
-            } else if (outputs[0] == 1 &&  outputs[1] == 1) {
-                new_dir = 1;
-            }
-            facing[idx] = f;
-            
-            
-            if(new_dir != 0) {
-                pair<int,int> new_pos = getRelativePosition(location[idx], facing[idx], new_dir);
-                if(canMove(new_pos)) {
-                    move(idx, new_pos, f);
+                
+                // TRACK POSITIONS
+                for(int i = 0; i < maxOrgs; i++) {
+                    worldLog[i][0][t] = (to_string(location[i].first));
+                    worldLog[i][1][t] = (to_string(location[i].second));
+                    worldLog[i][2][t] = (to_string(facing[i]));
                 }
             }
-            // SET SHARED BRAIN TO OLD STATE
-           
-            //for(int i = 0; i < oldStates[idx].size(); i++) {
-            //    oldStates[idx][i].clear();
-            //}
-            
-            oldStates[idx].clear();
-            for(int idxState = 0; idxState < nNodes; idxState++) {
-                oldStates[idx].push_back(dynamic_pointer_cast<MarkovBrain>(org->brain)->nodes[idxState]);
-            }
-            for (int i = 0; i < o_inputs.size(); i++) {
-                oldStates[idx][i] = o_inputs[i];
-            }
+        } //END GAME LOOP
+        // CALCULATE SCORE
+        double globalscore = 0;
+        for (int i = 0; i < maxOrgs; i++) {
+            globalscore += score[i];
         }
+        globalscore /= maxOrgs;
+        //randomGlobalScore += globalscore;
         
-        if(visualize) {
+        if (visualize) {
+            // WRITE BEST BRAIN TPM/CM
+            shared_ptr<MarkovBrain> mb = dynamic_pointer_cast<MarkovBrain>(org->brain->makeCopy());
+            getTPM(mb);
+            getCM(mb);
             
-            // TRACK POSITIONS
-            for(int i = 0; i < maxOrgs; i++) {
-                worldLog[i][0][t] = (to_string(location[i].first));
-                worldLog[i][1][t] = (to_string(location[i].second));
-                worldLog[i][2][t] = (to_string(facing[i]));
-                worldLog[i][3][t] = (to_string(score[i]));
-            }
+            // WRITE STATES
+            //SORT
             
-            
-        }
-    }
-    
-    // CALCULATE SCORE
-    double globalscore = 0;
-    for (int i = 0; i < maxOrgs; i++) {
-        globalscore += score[i];
-    }
-    globalscore /= maxOrgs;
-    org->dataMap.setOutputBehavior("score", DataMap::AVE | DataMap::LIST);
-    org->dataMap.Append("score", globalscore);
-    
-    if (visualize) {
-        // WRITE BEST BRAIN TPM/CM
-        shared_ptr<MarkovBrain> mb = dynamic_pointer_cast<MarkovBrain>(org->brain->makeCopy());
-        getTPM(mb);
-        getCM(mb);
-        
-        // WRITE STATES
-        //SORT
-        
-        for(int i = 0; i < states.size(); i++) {
-            for(int j = 0; j < states.size(); j++) {
-                if(states_count[j] > states_count[i]) {
-                    int c = states_count[j];
-                    states_count[j] = states_count[i];
-                    states_count[i] = c;
-                    vector<int> s = states[j];
-                    states[j] = states[i];
-                    states[i] = s;
+            for(int i = 0; i < states.size(); i++) {
+                for(int j = 0; j < states.size(); j++) {
+                    if(states_count[j] > states_count[i]) {
+                        int c = states_count[j];
+                        states_count[j] = states_count[i];
+                        states_count[i] = c;
+                        vector<int> s = states[j];
+                        states[j] = states[i];
+                        states[i] = s;
+                    }
                 }
             }
-        }
-        
-        stringstream ssfile;
-        ssfile << FileManager::outputDirectory << "/states.csv";
-        string states_file = ssfile.str();
-        
-        ofstream sfile;
-        sfile.open (states_file);
+            
+            stringstream ssfile;
+            ssfile << FileManager::outputDirectory << "/states.csv";
+            string states_file = ssfile.str();
+            
+            ofstream sfile;
+            sfile.open (states_file);
 
-        for(int i = 0; i < states.size(); i++) {
-            for(int j = 0; j < states[i].size(); j++) {
-                sfile << states[i][j];
-                if(j<states[i].size()-1) sfile << ",";
+            for(int i = 0; i < states.size(); i++) {
+                for(int j = 0; j < states[i].size(); j++) {
+                    sfile << states[i][j];
+                    if(j<states[i].size()-1) sfile << ",";
+                }
+                sfile << "\n";
             }
-            sfile << "\n";
-        }
-        sfile.close();
-        
-        stringstream ss_statesfile;
-        ss_statesfile << FileManager::outputDirectory << "/states_count.csv";
-        states_file = ss_statesfile.str();
-        
-        sfile.open (states_file);
-        
-        for(int i = 0; i < states_count.size(); i++) {
-            sfile << states_count[i] << "\n";
-        }
-        sfile.close();
-        
-        // WRITE POSITONS
-        stringstream ss;
-        ss << FileManager::outputDirectory << "/positions.csv";
-        string pos_file = ss.str();
-        
-        ofstream map;
-        map.open (pos_file);
-        for (int i = 0; i < 5; i++) {
-            for(int j = 0; j < maxOrgs; j++) {
-                stringstream val;
-                val << '"';
-                for(int k = 0; k<worldUpdates; k++) {
-                    if (k+1 >= worldUpdates) {
-                        val << worldLog[j][i][k];
+            sfile.close();
+            
+            stringstream ss_statesfile;
+            ss_statesfile << FileManager::outputDirectory << "/states_count.csv";
+            states_file = ss_statesfile.str();
+            
+            sfile.open (states_file);
+            
+            for(int i = 0; i < states_count.size(); i++) {
+                sfile << states_count[i] << "\n";
+            }
+            sfile.close();
+            
+            // WRITE POSITONS
+            stringstream ss;
+            ss << FileManager::outputDirectory << "/positions.csv";
+            string pos_file = ss.str();
+            
+            ofstream map;
+            map.open (pos_file);
+            for (int i = 0; i < 5; i++) {
+                for(int j = 0; j < maxOrgs; j++) {
+                    stringstream val;
+                    val << '"';
+                    for(int k = 0; k<worldUpdates; k++) {
+                        if (k+1 >= worldUpdates) {
+                            val << worldLog[j][i][k];
+                        } else {
+                            val << worldLog[j][i][k] << '|';
+                            
+                        }
+                    }
+                    val << '"';
+                    
+                    if (j+1 >= maxOrgs) {
+                        map << val.str();
                     } else {
-                        val << worldLog[j][i][k] << '|';
+                        map << val.str() << ',';
                         
                     }
                 }
-                val << '"';
-                
-                if (j+1 >= maxOrgs) {
-                    map << val.str();
-                } else {
-                    map << val.str() << ',';
-                    
-                }
+                map << "\n";
             }
-            map << "\n";
-        }
-        map.close();
+            map.close();
+            
+            //write score
+            double scorewocol = globalscore;
+            if(hasPenalty) {
+                scorewocol = scorewocol + ((penalty * collisionCount) / maxOrgs);
+            }
+            stringstream scorefile_ss;
+            scorefile_ss << FileManager::outputDirectory << "/score.csv";
+            string scorefile = scorefile_ss.str();
+            ofstream scorefile_of;
+            scorefile_of.open (scorefile);
+            scorefile_of << globalscore << ";" << collisionCount << ";" << scorewocol;
         
-        //write score
-        double scorewocol = globalscore;
-        if(hasPenalty) {
-            scorewocol = scorewocol + ((penalty * collisionCount) / maxOrgs);
-        }
-        stringstream scorefile_ss;
-        scorefile_ss << FileManager::outputDirectory << "/score.csv";
-        string scorefile = scorefile_ss.str();
-        ofstream scorefile_of;
-        scorefile_of.open (scorefile);
-        scorefile_of << globalscore << ";" << collisionCount << ";" << scorewocol;
-    
-        scorefile_of.close();
+            scorefile_of.close();
 
+            
+        }
         
-    }
+        generation++;
+        
+        // CLEAN UP
+        for (int i = 0; i < gridX ; ++i){
+            delete [] this->agentMap[i];
+            //if(phero) delete [] this->pheroMap[i];
+        }
+        
+        location.clear();
+        oldLocation.clear();
+        score.clear();
+        waitForGoal.clear();
+        facing.clear();
+        for(int i = 0; i < oldStates.size(); i++) {
+            oldStates[i].clear();
+        }
+        oldStates.clear();
+    //} //END RANDOM LOOP
     
-    generation++;
-    
-    // CLEAN UP
-    for (int i = 0; i < gridX ; ++i){
-        delete [] this->agentMap[i];
-        //if(phero) delete [] this->pheroMap[i];
-    }
-    
-    location.clear();
-    oldLocation.clear();
-    score.clear();
-    waitForGoal.clear();
-    facing.clear();
-    for(int i = 0; i < oldStates.size(); i++) {
-        oldStates[i].clear();
-    }
-    oldStates.clear();
-    
+    org->dataMap.setOutputBehavior("score", DataMap::AVE | DataMap::LIST);
+    org->dataMap.Append("score", globalscore);
 }
 
 int SwarmWorld::requiredInputs() {
@@ -744,6 +771,25 @@ bool SwarmWorld::canMove(pair<int,int> locB) {
 
 bool SwarmWorld::isWall(pair<int, int> loc) {
     return isValid(loc) && waterMap[loc.first][loc.second] == 0;
+}
+
+ vector<pair<int,int>> SwarmWorld::getInnerPosition(pair<int,int> loc) {
+    vector<pair<int,int>> locs;
+    locs.push_back({loc.first + 1, loc.second});
+    locs.push_back({loc.first + 1, loc.second + 1});
+    locs.push_back({loc.first, loc.second + 1});
+    locs.push_back({loc.first - 1, loc.second + 1});
+    locs.push_back({loc.first - 1, loc.second});
+    locs.push_back({loc.first - 1, loc.second - 1});
+    locs.push_back({loc.first, loc.second - 1});
+    locs.push_back({loc.first + 1, loc.second - 1});
+    vector<pair<int, int>> locsValid;
+    for(int i = 0; i < 8; i++) {
+        if(isValid(locs[i])) {
+            locsValid.push_back(locs[i]);
+        }
+    }
+    return locsValid;
 }
 
 
